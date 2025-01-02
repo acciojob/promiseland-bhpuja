@@ -1,16 +1,123 @@
+
 <!DOCTYPE html>
-
 <html>
-
 <head>
-	<link rel="stylesheet" href="styles.css">
+  <title>Custom Promise Implementation</title>
 </head>
-
 <body>
-	<!-- the entire body must be written by student -->
-    <script type="text/javascript" src="./script.js">
-</script>
+  <script>
+    class CustomPromise {
+      constructor(executor) {
+        this.state = "pending";
+        this.value = undefined;
+        this.handlers = [];
 
+        const resolve = (value) => {
+          if (this.state !== "pending") return;
+          this.state = "fulfilled";
+          this.value = value;
+          this.executeHandlers();
+        };
+
+        const reject = (reason) => {
+          if (this.state !== "pending") return;
+          this.state = "rejected";
+          this.value = reason;
+          this.executeHandlers();
+        };
+
+        try {
+          executor(resolve, reject);
+        } catch (error) {
+          reject(error);
+        }
+      }
+
+      then(onFulfilled, onRejected) {
+        return new CustomPromise((resolve, reject) => {
+          this.addHandler({
+            onFulfilled: value => {
+              if (typeof onFulfilled === "function") {
+                try {
+                  resolve(onFulfilled(value));
+                } catch (error) {
+                  reject(error);
+                }
+              } else {
+                resolve(value);
+              }
+            },
+            onRejected: reason => {
+              if (typeof onRejected === "function") {
+                try {
+                  resolve(onRejected(reason));
+                } catch (error) {
+                  reject(error);
+                }
+              } else {
+                reject(reason);
+              }
+            }
+          });
+        });
+      }
+
+      catch(onRejected) {
+        return this.then(null, onRejected);
+      }
+
+      finally(onFinally) {
+        return this.then(
+          value => {
+            if (typeof onFinally === "function") onFinally();
+            return value;
+          },
+          reason => {
+            if (typeof onFinally === "function") onFinally();
+            throw reason;
+          }
+        );
+      }
+
+      addHandler(handler) {
+        this.handlers.push(handler);
+        if (this.state !== "pending") {
+          this.executeHandlers();
+        }
+      }
+
+      executeHandlers() {
+        if (this.state === "pending") return;
+        this.handlers.forEach(handler => {
+          if (this.state === "fulfilled" && handler.onFulfilled) {
+            handler.onFulfilled(this.value);
+          } else if (this.state === "rejected" && handler.onRejected) {
+            handler.onRejected(this.value);
+          }
+        });
+        this.handlers = [];
+      }
+    }
+
+    // Example usage
+    const promise = new CustomPromise((resolve, reject) => {
+      setTimeout(() => resolve("Task completed"), 1000);
+    });
+
+    promise
+      .then(result => {
+        console.log(result);
+        return "Next step";
+      })
+      .then(next => {
+        console.log(next);
+      })
+      .catch(error => {
+        console.error("Error:", error);
+      })
+      .finally(() => {
+        console.log("Process finished");
+      });
+  </script>
 </body>
-
 </html>
